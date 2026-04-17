@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SURF CUBE - Dev Luis Felipe</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; touch-action: none; background: #87CEEB; font-family: 'Arial Black', sans-serif; }
+        canvas { display: block; }
+        
+        /* Redes Sociais no Canto Superior Direito */
+        .social-box {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            text-align: right;
+            z-index: 30;
+            pointer-events: auto;
+        }
+        .social-tag {
+            display: block;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            margin-bottom: 4px;
+            font-family: 'Arial', sans-serif;
+            text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* HUD */
+        #game-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: none; }
+        .score-container { position: absolute; top: 20px; left: 20px; color: white; text-shadow: 2px 2px #000; font-size: 20px; }
+        /* Ajustei o HUD de moedas para não bater nas redes sociais */
+        .coin-container { position: absolute; top: 75px; right: 15px; color: #ffcc00; text-shadow: 2px 2px #000; font-size: 22px; }
+        
+        #shield-info { position: absolute; bottom: 20px; left: 20px; color: #00e5ff; font-size: 18px; text-shadow: 1px 1px #000; }
+        #shield-timer { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); color: #00e5ff; font-size: 45px; text-shadow: 2px 2px #000; display: none; }
+
+        /* Telas */
+        .ui-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 20px; box-sizing: border-box; }
+        .game-title { font-size: 45px; color: #ffcc00; text-shadow: 4px 4px #cc0000; margin-bottom: 5px; letter-spacing: -1px; }
+        
+        .dev-intro { font-family: 'Arial', sans-serif; font-size: 13px; color: #bbb; max-width: 280px; margin-bottom: 25px; line-height: 1.4; }
+        
+        .btn-group { display: flex; flex-direction: column; gap: 8px; width: 260px; }
+        .btn { padding: 14px; border: none; border-radius: 12px; color: white; font-weight: bold; text-transform: uppercase; cursor: pointer; font-size: 14px; transition: 0.1s; box-shadow: 0 4px 0 rgba(0,0,0,0.3); }
+        .btn:active { transform: translateY(2px); box-shadow: none; }
+
+        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 260px; margin-bottom: 15px; }
+        .shop-item { background: #333; padding: 10px; border-radius: 10px; border: 2px solid transparent; }
+        .shop-item.active { border-color: #ffcc00; }
+        .item-preview { width: 30px; height: 30px; margin: 0 auto 5px; border: 1px solid #fff; }
+    </style>
+</head>
+<body>
+
+<div class="social-box">
+    <a href="#" class="social-tag">📸 @lufe.sousa</a>
+    <a href="#" class="social-tag">🎵 @Luix.b7</a>
+</div>
+
+<div id="game-ui">
+    <div class="score-container">PONTOS: <span id="score-val">0</span></div>
+    <div class="coin-container">🟡 <span id="coin-val-hud">0</span></div>
+    <div id="shield-info">🛡️ <span id="shield-count">0</span></div>
+    <div id="shield-timer">🛡️ <span id="timer-val">10</span></div>
+</div>
+
+<div id="menu-principal" class="ui-screen">
+    <div class="game-title">SURF CUBE</div>
+    <div class="dev-intro">
+        Olá! Seja bem vindo ao meu jogo que criei "Surf Cube". Como é a primeira vez que crio um jogo, podem aparecer alguns bugs. Prazer, meu nome é Luis Felipe.
+    </div>
+    
+    <div style="color: #ffcc00; margin-bottom: 10px;">SALDO: 🟡 <span id="coin-val-menu">0</span></div>
+    <div class="btn-group">
+        <button class="btn" style="background:#4caf50" onclick="iniciarJogo(2500)">FÁCIL</button>
+        <button class="btn" style="background:#ff9800" onclick="iniciarJogo(1500)">MÉDIO</button>
+        <button class="btn" style="background:#f44336" onclick="iniciarJogo(700)">INSANO</button>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn" style="background:#673ab7; flex: 1;" onclick="abrirLoja()">🛒 LOJA</button>
+            <button class="btn" style="background:#607d8b; flex: 1;" onclick="abrirConfig()">⚙️</button>
+        </div>
+    </div>
+</div>
+
+<div id="menu-loja" class="ui-screen" style="display: none;">
+    <h2 style="color: #ffcc00;">LOJA DE SKINS</h2>
+    <div class="shop-grid" id="skin-items"></div>
+    <div style="background:#222; padding:10px; border-radius:10px; width:240px; margin-bottom:15px; border: 1px solid #00e5ff;">
+        <div style="color:#00e5ff; font-size:12px;">🛡️ PACK ESCUDO (150 MOEDAS)</div>
+        <button class="btn" style="background:#00e5ff; color:#000; padding:5px; width:100%; font-size:11px; margin-top:5px;" onclick="comprarEscudo()">COMPRAR</button>
+    </div>
+    <button class="btn" style="background:#555; width:200px" onclick="fecharLoja()">VOLTAR</button>
+</div>
+
+<div id="menu-config" class="ui-screen" style="display: none;">
+    <h2 style="color: #ffcc00;">CONFIGS</h2>
+    <div style="width:200px; text-align:left; margin-bottom:20px;">
+        <label><input type="checkbox" id="check-som" checked> Efeitos de Som</label><br><br>
+        <label><input type="checkbox" id="check-sombras" checked onchange="toggleSombras()"> Sombras Reais</label>
+    </div>
+    <button class="btn" style="background:#555; width:200px" onclick="fecharConfig()">VOLTAR</button>
+</div>
+
+<div id="tela-morte" class="ui-screen" style="display: none;">
+    <div style="font-size: 50px; color: #ff0000; text-shadow: 2px 2px #000;">BATEU!</div>
+    <div class="btn-group" style="margin-top: 20px;">
+        <button class="btn" style="background:#2196f3" onclick="recomeçar()">RECORRER</button>
+        <button class="btn" style="background:#555" onclick="irParaHome()">MENU INICIAL</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+    // [Lógica Three.js idêntica à versão anterior para manter a jogabilidade de Surf Cube]
+    let scene, camera, renderer, cube, sunLight;
+    let isPlaying = false, isJumping = false, isCrouching = false, isInvincible = false;
+    let score = 0, totalCoins = parseInt(localStorage.getItem('coins')) || 0, sessionCoins = 0;
+    let currentDifficulty = 2500, lastSpawn = 0, lastCoinSpawn = 0, targetX = 0, lastTap = 0;
+    let obstacles = [], coins = [], audioCtx = null;
+    let shieldInventory = parseInt(localStorage.getItem('shieldAmount')) || 0;
+
+    const skins = [
+        { id: 'red', name: 'Vermelho', color: 0xff0000, price: 0, owned: true },
+        { id: 'green', name: 'Verde', color: 0x4caf50, price: 50, owned: false },
+        { id: 'orange', name: 'Laranja', color: 0xff9800, price: 80, owned: false },
+        { id: 'blue', name: 'Azul', color: 0x2196f3, price: 120, owned: false },
+        { id: 'gold', name: 'Ouro', color: 0xffd700, price: 300, owned: false }
+    ];
+    let activeSkin = localStorage.getItem('activeSkin') || 'red';
+    const savedSkins = JSON.parse(localStorage.getItem('ownedSkins')) || ['red'];
+    skins.forEach(s => { if(savedSkins.includes(s.id)) s.owned = true; });
+
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        const sData = skins.find(s => s.id === activeSkin);
+        cube = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshPhongMaterial({ color: sData.color, transparent: true }));
+        cube.castShadow = true; scene.add(cube);
+
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 2000), new THREE.MeshPhongMaterial({ color: 0x222222 }));
+        floor.rotation.x = -Math.PI/2; floor.position.y = -0.6; floor.receiveShadow = true;
+        scene.add(floor);
+
+        for(let i of [-2, 2]) {
+            const line = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 2000), new THREE.MeshBasicMaterial({color: 0x444444}));
+            line.rotation.x = -Math.PI/2; line.position.set(i, -0.59, 0); scene.add(line);
+        }
+
+        sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        sunLight.position.set(5, 10, 5); sunLight.castShadow = true;
+        scene.add(sunLight); scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+        setupControls(); renderSkins(); updateUI(); animate();
+    }
+
+    function setupControls() {
+        let tsX, tsY;
+        document.addEventListener('touchstart', e => {
+            let now = Date.now(); if(now - lastTap < 300) ativarEscudo(); lastTap = now;
+            tsX = e.touches[0].clientX; tsY = e.touches[0].clientY;
+        });
+        document.addEventListener('touchend', e => {
+            if(!isPlaying) return;
+            let dx = e.changedTouches[0].clientX - tsX, dy = e.changedTouches[0].clientY - tsY;
+            if(Math.abs(dx) > Math.abs(dy)) { if(Math.abs(dx) > 30) targetX = dx > 0 ? Math.min(targetX+4, 4) : Math.max(targetX-4, -4); }
+            else if(Math.abs(dy) > 30) { if(dy < 0 && !isJumping) { isJumping = true; jumpV = 0.28; } else if(dy > 0) { isCrouching = true; setTimeout(()=>isCrouching=false, 600); } }
+        });
+    }
+
+    function ativarEscudo() {
+        if(shieldInventory > 0 && !isInvincible && isPlaying) {
+            shieldInventory--; isInvincible = true; cube.material.opacity = 0.5;
+            document.getElementById('shield-timer').style.display = 'block';
+            let t = 10;
+            let timer = setInterval(() => {
+                t--; document.getElementById('timer-val').innerText = t;
+                if(t <= 0 || !isPlaying) { clearInterval(timer); isInvincible = false; cube.material.opacity = 1; document.getElementById('shield-timer').style.display = 'none'; }
+            }, 1000);
+            save(); updateUI();
+        }
+    }
+
+    function comprarEscudo() { if(totalCoins >= 150) { totalCoins -= 150; shieldInventory++; save(); updateUI(); } }
+
+    function buySkin(id) {
+        const s = skins.find(x => x.id === id);
+        if(s.owned) { activeSkin = id; cube.material.color.setHex(s.color); }
+        else if(totalCoins >= s.price) { totalCoins -= s.price; s.owned = true; activeSkin = id; cube.material.color.setHex(s.color); }
+        save(); renderSkins(); updateUI();
+    }
+
+    function save() {
+        localStorage.setItem('coins', totalCoins);
+        localStorage.setItem('shieldAmount', shieldInventory);
+        localStorage.setItem('activeSkin', activeSkin);
+        localStorage.setItem('ownedSkins', JSON.stringify(skins.filter(s => s.owned).map(s => s.id)));
+    }
+
+    function updateUI() {
+        document.getElementById('coin-val-menu').innerText = totalCoins;
+        document.getElementById('coin-val-hud').innerText = sessionCoins;
+        document.getElementById('shield-count').innerText = shieldInventory;
+        document.getElementById('score-val').innerText = score;
+    }
+
+    function iniciarJogo(d) {
+        currentDifficulty = d; isPlaying = true; score = 0; sessionCoins = 0;
+        obstacles.forEach(o => scene.remove(o.mesh)); coins.forEach(c => scene.remove(c.mesh));
+        obstacles = []; coins = []; targetX = 0; cube.position.set(0,0,0);
+        document.getElementById('menu-principal').style.display = 'none';
+        document.getElementById('tela-morte').style.display = 'none';
+        document.getElementById('game-ui').style.display = 'block';
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if(isPlaying) {
+            score++; updateUI();
+            cube.position.x += (targetX - cube.position.x) * 0.15;
+            camera.position.x += (cube.position.x * 0.5 - camera.position.x) * 0.05;
+            camera.position.set(camera.position.x, 4.5, 8.5); camera.lookAt(cube.position.x*0.5, 0, -5);
+
+            if(isJumping) { cube.position.y += jumpV; jumpV -= 0.013; cube.rotation.x -= 0.22; if(cube.position.y <= 0) { cube.position.y = 0; isJumping = false; cube.rotation.x = 0; } }
+            if(isCrouching) { cube.scale.y = 0.5; cube.position.y = -0.3; } else if(!isJumping) { cube.scale.y = 1; cube.position.y = 0; }
+
+            if(Date.now() - lastSpawn > currentDifficulty) {
+                const lane = (Math.floor(Math.random() * 3) - 1) * 4;
+                const type = Math.random() > 0.5 ? 'pulo' : 'agacho';
+                const obs = new THREE.Mesh(new THREE.BoxGeometry(3, 1.6, 1), new THREE.MeshPhongMaterial({ color: type === 'pulo' ? 0xffff00 : 0x800080 }));
+                obs.position.set(lane, type === 'pulo' ? 0 : 2, -100); obs.castShadow = true;
+                scene.add(obs); obstacles.push({ mesh: obs, type }); lastSpawn = Date.now();
+            }
+
+            if(Date.now() - lastCoinSpawn > 1800) {
+                const lane = (Math.floor(Math.random() * 3) - 1) * 4;
+                for(let i=0; i<3; i++) {
+                    const cMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 16), new THREE.MeshPhongMaterial({ color: 0xffd700 }));
+                    cMesh.rotation.x = Math.PI/2; cMesh.position.set(lane, 0.3, -100 - (i*4));
+                    scene.add(cMesh); coins.push({ mesh: cMesh });
+                }
+                lastCoinSpawn = Date.now();
+            }
+
+            for(let i=obstacles.length-1; i>=0; i--) {
+                let o = obstacles[i]; o.mesh.position.z += 0.75;
+                if(!isInvincible && Math.abs(cube.position.z - o.mesh.position.z) < 1.2 && Math.abs(cube.position.x - o.mesh.position.x) < 1.8) {
+                    if((o.type === 'pulo' && cube.position.y < 0.6) || (o.type === 'agacho' && !isCrouching)) {
+                        isPlaying = false; totalCoins += sessionCoins; save(); document.getElementById('tela-morte').style.display = 'flex';
+                    }
+                }
+                if(o.mesh.position.z > 10) { scene.remove(o.mesh); obstacles.splice(i, 1); }
+            }
+
+            for(let i=coins.length-1; i>=0; i--) {
+                let c = coins[i]; c.mesh.position.z += 0.75; c.mesh.rotation.y += 0.06;
+                if(cube.position.distanceTo(c.mesh.position) < 1.6) {
+                    sessionCoins++; scene.remove(c.mesh); coins.splice(i, 1); updateUI();
+                } else if(c.mesh.position.z > 10) { scene.remove(c.mesh); coins.splice(i, 1); }
+            }
+        }
+        renderer.render(scene, camera);
+    }
+
+    function renderSkins() {
+        const container = document.getElementById('skin-items'); container.innerHTML = '';
+        skins.forEach(s => {
+            const div = document.createElement('div');
+            div.className = `shop-item ${activeSkin === s.id ? 'active' : ''}`;
+            div.innerHTML = `<div class="item-preview" style="background:#${s.color.toString(16).padStart(6, '0')}"></div>
+                <button class="btn" style="padding:4px; font-size:10px; background:${s.owned ? '#555' : '#4caf50'}; width:100%" onclick="buySkin('${s.id}')">${s.owned ? 'USAR' : '🟡'+s.price}</button>`;
+            container.appendChild(div);
+        });
+    }
+
+    function abrirLoja() { document.getElementById('menu-principal').style.display='none'; document.getElementById('menu-loja').style.display='flex'; }
+    function fecharLoja() { document.getElementById('menu-loja').style.display='none'; document.getElementById('menu-principal').style.display='flex'; }
+    function abrirConfig() { document.getElementById('menu-principal').style.display='none'; document.getElementById('menu-config').style.display='flex'; }
+    function fecharConfig() { document.getElementById('menu-config').style.display='none'; document.getElementById('menu-principal').style.display='flex'; }
+    function recomeçar() { iniciarJogo(currentDifficulty); }
+    function irParaHome() { document.getElementById('tela-morte').style.display='none'; document.getElementById('menu-principal').style.display='flex'; isPlaying=false; }
+    function toggleSombras() { renderer.shadowMap.enabled = document.getElementById('check-sombras').checked; }
+
+    init();
+</script>
+</body>
+</html>
